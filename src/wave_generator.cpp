@@ -41,13 +41,6 @@ std::vector<int16_t> WaveGenerator::generateSineWave() {
   const int16_t max_amplitude =
       static_cast<int16_t>(params_.amplitude * 32767.0);
 
-  std::cout << "Generating sine wave:" << std::endl;
-  std::cout << "  Sample rate: " << params_.sample_rate << " Hz" << std::endl;
-  std::cout << "  Frequency: " << params_.frequency << " Hz" << std::endl;
-  std::cout << "  Duration: " << params_.duration << " seconds" << std::endl;
-  std::cout << "  Total samples: " << total_samples << std::endl;
-  std::cout << "  Amplitude: " << params_.amplitude << std::endl;
-
   for (size_t i = 0; i < total_samples; ++i) {
     const double time = i * sample_period;
     const double sine_value = std::sin(angular_frequency * time);
@@ -90,73 +83,6 @@ bool WaveGenerator::saveAsWAV(const std::vector<int16_t>& pcm_data,
   file.write(reinterpret_cast<const char*>(pcm_data.data()), data_size);
 
   file.close();
-  std::cout << "WAV file saved: " << filename << " (" << data_size
-            << " bytes of PCM data)" << std::endl;
-  return true;
-}
-
-void WaveGenerator::printPCMData(const std::vector<int16_t>& pcm_data,
-                                 size_t max_samples) {
-  std::cout << "\nPCM Data (first " << std::min(max_samples, pcm_data.size())
-            << " samples):" << std::endl;
-  std::cout << "Sample#\tValue\tHex" << std::endl;
-  std::cout << "-------\t-----\t---" << std::endl;
-
-  for (size_t i = 0; i < std::min(max_samples, pcm_data.size()); ++i) {
-    std::cout << std::setw(7) << i << "\t" << std::setw(6) << pcm_data[i]
-              << "\t0x" << std::hex << std::setw(4) << std::setfill('0')
-              << (static_cast<uint16_t>(pcm_data[i]) & 0xFFFF) << std::dec
-              << std::setfill(' ') << std::endl;
-  }
-
-  if (pcm_data.size() > max_samples) {
-    std::cout << "... (" << (pcm_data.size() - max_samples) << " more samples)"
-              << std::endl;
-  }
-}
-
-bool WaveGenerator::saveAsCArray(const std::vector<int16_t>& pcm_data,
-                                 const std::string& filename,
-                                 const std::string& array_name) {
-  std::ofstream file(filename);
-  if (!file) {
-    std::cerr << "Error: Cannot create file " << filename << std::endl;
-    return false;
-  }
-
-  // ヘッダー部分
-  file << "// Generated C array for sine wave data (1 week duration)\n";
-  file << "// Sample rate: " << params_.sample_rate << " Hz\n";
-  file << "// Frequency: " << params_.frequency << " Hz\n";
-  file << "// Duration: " << params_.duration << " seconds\n";
-  file << "// Total samples: " << pcm_data.size() << "\n\n";
-
-  file << "#include <stdint.h>\n\n";
-  file << "const int16_t " << array_name << "[] = {\n";
-
-  // データ部分（16個ごとに改行）
-  for (size_t i = 0; i < pcm_data.size(); ++i) {
-    if (i % 16 == 0) {
-      file << "    ";
-    }
-    file << pcm_data[i];
-    if (i < pcm_data.size() - 1) {
-      file << ",";
-      if ((i + 1) % 16 == 0) {
-        file << "\n";
-      } else {
-        file << " ";
-      }
-    }
-  }
-
-  file << "\n};\n\n";
-  file << "const size_t " << array_name << "_size = " << pcm_data.size()
-       << ";\n";
-
-  file.close();
-  std::cout << "C array file saved: " << filename << " (1 week data, "
-            << pcm_data.size() << " samples)" << std::endl;
   return true;
 }
 
@@ -229,7 +155,5 @@ bool WaveGenerator::saveOneCycleAsCArray(const std::string& filename,
        << "_sample_rate = " << params_.sample_rate << ";\n";
 
   file.close();
-  std::cout << "C array file saved: " << filename << " (1 cycle data, "
-            << cycle_data.size() << " samples)" << std::endl;
   return true;
 }

@@ -25,18 +25,9 @@ class WaveGenerator {
   bool saveAsWAV(const std::vector<int16_t>& pcm_data,
                  const std::string& filename);
 
-  // PCMデータをコンソールに出力
-  void printPCMData(const std::vector<int16_t>& pcm_data,
-                    size_t max_samples = 100);
-
-  // C言語配列形式でPCMデータを保存（1週間分）
-  bool saveAsCArray(const std::vector<int16_t>& pcm_data,
-                    const std::string& filename,
-                    const std::string& array_name = "wave_data");
-
   // C言語配列形式で1サイクル分のPCMデータを保存
   bool saveOneCycleAsCArray(const std::string& filename,
-                            const std::string& array_name = "sine_wave_cycle");
+                            const std::string& array_name = "sine_wave_data");
 
  private:
   WaveParams params_;
