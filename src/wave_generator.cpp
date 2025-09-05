@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <random>
 
 WaveGenerator::WaveGenerator(const WaveParams& params) : params_(params) {
   // パラメータの妥当性チェックは呼び出し側で行う前提
@@ -16,8 +17,16 @@ bool WaveGenerator::validateParams(const WaveParams& params) {
     std::cerr << "Error: Sample rate must be greater than 0" << std::endl;
     return false;
   }
-  if (params.frequency <= 0) {
-    std::cerr << "Error: Frequency must be greater than 0" << std::endl;
+  if (params.wave_type == WaveType::SINE && params.frequency <= 0) {
+    std::cerr << "Error: Frequency must be greater than 0 for sine wave"
+              << std::endl;
+    return false;
+  }
+  if (params.wave_type == WaveType::WHITE_NOISE && params.frequency > 0 &&
+      params.frequency >= params.sample_rate / 2) {
+    std::cerr
+        << "Error: Upper frequency limit must be less than Nyquist frequency ("
+        << (params.sample_rate / 2) << " Hz)" << std::endl;
     return false;
   }
   if (params.duration <= 0) {
@@ -48,6 +57,55 @@ std::vector<int16_t> WaveGenerator::generateSineWave() {
   }
 
   return pcm_data;
+}
+
+std::vector<int16_t> WaveGenerator::generateWhiteNoise() {
+  const size_t total_samples =
+      static_cast<size_t>(params_.sample_rate * params_.duration);
+  std::vector<int16_t> pcm_data(total_samples);
+
+  // 乱数生成器の初期化
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(-1.0, 1.0);
+
+  const int16_t max_amplitude =
+      static_cast<int16_t>(params_.amplitude * 32767.0);
+
+  // 上限周波数が指定されている場合は簡易的なローパスフィルタを適用
+  if (params_.frequency > 0 && params_.frequency < params_.sample_rate / 2) {
+    // 簡易的なローパスフィルタ係数（カットオフ周波数ベース）
+    const double cutoff_ratio = params_.frequency / (params_.sample_rate / 2);
+    const double alpha = std::exp(-2.0 * M_PI * cutoff_ratio);
+
+    double prev_sample = 0.0;
+    for (size_t i = 0; i < total_samples; ++i) {
+      double noise_sample = dis(gen);
+      // 1次ローパスフィルタ
+      prev_sample = alpha * prev_sample + (1.0 - alpha) * noise_sample;
+      pcm_data[i] = static_cast<int16_t>(prev_sample * max_amplitude);
+    }
+  } else {
+    // フィルタなしのホワイトノイズ
+    for (size_t i = 0; i < total_samples; ++i) {
+      const double noise_sample = dis(gen);
+      pcm_data[i] = static_cast<int16_t>(noise_sample * max_amplitude);
+    }
+  }
+
+  return pcm_data;
+}
+
+std::vector<int16_t> WaveGenerator::generateWave() {
+  switch (params_.wave_type) {
+    case WaveType::SINE:
+      return generateSineWave();
+    case WaveType::WHITE_NOISE:
+      return generateWhiteNoise();
+    default:
+      std::cerr << "Error: Unknown wave type" << std::endl;
+      return std::vector<int16_t>();
+  }
 }
 
 bool WaveGenerator::saveAsWAV(const std::vector<int16_t>& pcm_data,
@@ -88,6 +146,13 @@ bool WaveGenerator::saveAsWAV(const std::vector<int16_t>& pcm_data,
 
 bool WaveGenerator::saveOneCycleAsCArray(const std::string& filename,
                                          const std::string& array_name) {
+  // ホワイトノイズでは1サイクルの概念がないため、サイン波のみサポート
+  if (params_.wave_type != WaveType::SINE) {
+    std::cerr << "Error: C array output is only supported for sine waves"
+              << std::endl;
+    return false;
+  }
+
   // 1サイクルに必要なサンプル数を計算
   const size_t samples_per_cycle =
       static_cast<size_t>(params_.sample_rate / params_.frequency);

@@ -6,11 +6,14 @@
 
 class WaveGenerator {
  public:
+  enum class WaveType { SINE, WHITE_NOISE };
+
   struct WaveParams {
     uint32_t sample_rate;  // サンプリング周波数 (Hz)
-    double frequency;      // 周波数 (Hz)
+    double frequency;      // 周波数 (Hz) (ホワイトノイズでは使用しない)
     double duration;       // 継続時間 (秒)
     double amplitude;      // 振幅 (0.0-1.0)
+    WaveType wave_type;    // 波形の種類
   };
 
   WaveGenerator(const WaveParams& params);
@@ -21,11 +24,17 @@ class WaveGenerator {
   // サイン波のPCMデータを生成
   std::vector<int16_t> generateSineWave();
 
+  // ホワイトノイズのPCMデータを生成
+  std::vector<int16_t> generateWhiteNoise();
+
+  // 指定された波形タイプのPCMデータを生成
+  std::vector<int16_t> generateWave();
+
   // WAVファイルとして保存
   bool saveAsWAV(const std::vector<int16_t>& pcm_data,
                  const std::string& filename);
 
-  // C言語配列形式で1サイクル分のPCMデータを保存
+  // C言語配列形式で1サイクル分のPCMデータを保存（サイン波のみ）
   bool saveOneCycleAsCArray(const std::string& filename,
                             const std::string& array_name = "sine_wave_data");
 
